@@ -1,0 +1,43 @@
+# lbnamed.config -- lbnamed configuration for best.stanford.edu.  -*- sh -*-
+#
+# The first part of this file is a list of machines participating in a
+# load-balance pool, the type of machine (from 0 to 10, where 0 is a pure
+# user machine and 10 is a machine delivering a service that doesn't allow
+# general logins -- this value is used to determine how much weight a
+# login vs. a load point should be given in determining machine load;
+# servers, at 10, will ignore the number of logins), and the load balance
+# pools that it is participating in.
+#
+# One can put a number in parentheses after the name of a load balance
+# pool; this is a "participation factor" for that pool.  The weight
+# calculated for that system will be divided by the participation factor,
+# so for example setting a participation factor of .1 in a load-balance
+# pool will cause that system to only be handed out if all other systems
+# in the pool have a weight at least 10 times the weight of that machine.
+# This is primarily used to configure "hot spares."
+
+
+##############################################################################
+# Cluster and Timeshare Servers
+##############################################################################
+
+
+##############################################################################
+# Web Infrastructure Servers
+##############################################################################
+
+# Production cgi servers.
+<% @clients.each do |client| -%>
+<%= client %>.p-cloud-p.com         10          www
+<% end -%>
+
+
+
+
+###############################################################################
+# TTL, MX, and top slice factor -- THIS BLOCK MUST BE LAST
+###############################################################################
+
+# Pool name   TTL  Top slice  MX
+# ----------  ---  ---------  ----------------------
+www      0    2

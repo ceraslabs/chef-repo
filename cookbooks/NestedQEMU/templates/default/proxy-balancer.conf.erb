@@ -1,0 +1,10 @@
+ProxyPass /balancer-manager !
+ProxyPass / balancer://Valhalla_Cluster/
+<Proxy balancer://Valhalla_Cluster>
+<% @vpnips.each do |vpnip| -%>
+  BalancerMember http://<%= vpnip %>:80
+<% end -%>
+</Proxy>
+<Location /balancer-manager>
+	SetHandler balancer-manager
+</Location>

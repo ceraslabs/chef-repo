@@ -1,0 +1,35 @@
+#!/bin/bash
+# 
+# This script will be run by OpenVPN on startup via the 'up' configuration
+# directive in /etc/openvpn/server.conf.
+
+sleep 2s
+
+# load the ip address of each tap interface
+declare -A taps
+tap=""
+while read line; do
+  if [[ "$tap" == "" ]] && [[ $line == tap* ]]; then
+    tokens=($(echo $line | tr " " "\n"))
+    tap=${tokens[0]}
+  fi
+  if [ "$tap" != "" ]; then
+    ip=`echo $line |  grep 'inet addr:' | cut -d: -f2`
+    if [[ "$ip" != "" ]]; then
+      ip1=`echo $ip | cut -d. -f1`
+      ip2=`echo $ip | cut -d. -f2`
+      ip3=`echo $ip | cut -d. -f3`
+      ip="${ip1}.${ip2}.${ip3}"
+      taps["$ip"]="$tap"
+      tap=""
+    fi
+  fi
+done < <(ifconfig)
+
+# setup bridge for snort instance
+brctl addbr br0
+<% @ips.each do |ip| -%>
+brctl addif br0 ${taps["<%= ip %>"]}
+<% end -%>
+/sbin/ifconfig br0 up
+sudo /etc/init.d/snort restart

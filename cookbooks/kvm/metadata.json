@@ -1,0 +1,34 @@
+{
+  "name": "kvm",
+  "description": "Installs/Configures/tuning kvm",
+  "long_description": "= DESCRIPTION:\n\nInstall KVM Hypervisor on Ubuntu and Debian\n\n= REQUIREMENTS:\n\n== OS\n* Ubuntu\n* Debian\n\n== cookbooks\n* sysctl : https://github.com/Youscribe/sysctl-cookbook\n* modules : https://github.com/Youscribe/modules-cookbook\n\n= USAGE:\n\nsimply add recipe \"kvm\" to install kvm\nand\nsimply add recipe \"kvm::tuning\" to profite from some optimizations",
+  "maintainer": "Guilhem Lettron",
+  "maintainer_email": "guilhem.lettron@youscribe.com",
+  "license": "Apache 2.0",
+  "platforms": {
+    "debian": ">= 0.0.0",
+    "ubuntu": ">= 0.0.0"
+  },
+  "dependencies": {
+    "apt": ">= 0.0.0",
+    "sysctl": ">= 0.0.0",
+    "modules": ">= 0.0.0"
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.1.0"
+}

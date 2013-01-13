@@ -1,0 +1,28 @@
+<domain type='qemu' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name><%= @hostname %></name>
+  <memory>1048576</memory>
+  <currentMemory>1048576</currentMemory>
+  <os>
+    <type>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <devices>
+    <disk type='file' device='disk'>
+     <driver name='qemu' type='raw'/>
+      <source file='<%= @image %>'/>
+      <target dev='hda' bus='ide'/>
+    </disk>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <graphics type='vnc' port='-1' listen='0.0.0.0'/> 
+    <interface type='user'/>
+  </devices>
+
+<% @redirs.each do |redir| -%>
+  <qemu:commandline>
+    <qemu:arg value='-redir'/>
+    <qemu:arg value='<%= redir %>'/>
+  </qemu:commandline>
+<% end -%>
+
+</domain>
+

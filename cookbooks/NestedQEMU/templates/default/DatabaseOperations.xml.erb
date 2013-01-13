@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Context>
+	<Resource name="jdbc/SimpleDbOperations"
+				auth="Container"
+				type="javax.sql.DataSource" 
+				username="<%= @mysql_username %>"
+				password="<%= @mysql_password %>"
+				driverClassName="com.mysql.jdbc.Driver"
+				url="jdbc:mysql://<%= @mysql_server_url %>:3306/SimpleDatabase" 
+				maxActive="200"
+				maxIdle="30"
+				maxWait="10000"    /> 
+</Context> 
