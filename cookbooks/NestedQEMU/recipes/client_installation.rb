@@ -34,3 +34,5 @@ else
 end
 
 include_recipe "chef-workstation"
+
+include_recipe "pattern-deployer"

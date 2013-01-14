@@ -49,6 +49,8 @@ action :before_deploy do
 
   create_database_yml
 
+  generate_secret_token
+
 end
 
 action :before_migrate do
@@ -162,7 +164,6 @@ def install_gems
 end
 
 def create_database_yml
-  host = new_resource.find_database_server(new_resource.database_master_role)
 
   template "#{new_resource.path}/shared/database.yml" do
     source new_resource.database_template || "database.yml.erb"
@@ -171,9 +172,30 @@ def create_database_yml
     group new_resource.group
     mode "644"
     variables(
-      :host => host,
+      :host => new_resource.database["host"],
       :database => new_resource.database,
       :rails_env => new_resource.environment_name
     )
+  end
+end
+
+def generate_secret_token
+
+  ruby_block "generate_token" do
+    block do
+      node.set["rails"]["secret_token"] = `rake secret`
+      node.save
+    end
+    cwd new_resource.release_path
+  end
+
+  file_path = ::File.join(new_resource.release_path, "config", "initializers", "secret_token.rb")
+
+  template file_path do
+    source "secret_token.rb.erb"
+    cookbook "application_ruby"
+    owner new_resource.owner
+    group new_resource.group
+    mode "644"
   end
 end

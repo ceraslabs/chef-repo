@@ -1,0 +1,6 @@
+default["pattern_deployer"]["deploy_to"] = "/usr/local"
+default["pattern_deployer"]["database"]["system"] = "mysql"
+default["pattern_deployer"]["database"]["name"] = "project_production"
+default["pattern_deployer"]["database"]["username"] = "root"
+default["pattern_deployer"]["database"]["password"] = "root"
+default["pattern_deployer"]["database"]["adapter"] = "mysql2"

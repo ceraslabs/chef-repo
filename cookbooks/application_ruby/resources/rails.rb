@@ -20,7 +20,6 @@
 
 include Chef::Resource::ApplicationBase
 
-attribute :database_master_role, :kind_of => [String, NilClass], :default => nil
 # Actually defaults to "database.yml.erb", but nil means it wasn't set by the user
 attribute :database_template, :kind_of => [String, NilClass], :default => nil
 attribute :gems, :kind_of => [Array, Hash], :default => []
