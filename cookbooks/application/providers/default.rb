@@ -131,20 +131,6 @@ def run_deploy(force = false)
     ssh_wrapper "#{new_resource.path}/deploy-ssh-wrapper" if new_resource.deploy_key
     shallow_clone true
     rollback_on_error new_resource.rollback_on_error
-
-    # let sub-resources to set additional attributes
-    new_resource.sub_resources.each do |res|
-      version = Chef::Version.new(Chef::VERSION)
-      provider = if version.major > 10 || version.minor >= 14
-        Chef::Platform.provider_for_resource(res, :nothing)
-      else
-        Chef::Platform.provider_for_resource(res)
-      end
-      if provider.respond_to?(:set_attributes)
-        provider.set_attributes(self)
-      end
-    end
-
     all_environments = ([new_resource.environment]+new_resource.sub_resources.map{|res| res.environment}).inject({}){|acc, val| acc.merge(val)}
     environment all_environments
     migrate new_resource.migrate

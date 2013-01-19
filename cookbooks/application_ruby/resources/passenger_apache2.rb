@@ -1,8 +1,8 @@
 #
-# Cookbook Name:: apache2
-# Recipe:: logrotate
+# Cookbook Name:: application_ruby
+# Resources:: passenger
 #
-# Copyright 2012, Opscode, Inc.
+# Copyright 2012, ZephirWorks
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,15 +17,9 @@
 # limitations under the License.
 #
 
-apache_service = service "apache2" do
-  action :nothing
-end
+include Chef::Resource::ApplicationBase
 
-begin
-  include_recipe 'logrotate'
-rescue
-  Chef::Log.warn("The apache::logrotate recipe requires the logrotate cookbook. Install the cookbook with `knife cookbook site install logrotate`.")
-end
-logrotate_app apache_service.service_name do
-  path node['apache']['log_dir']
-end
+attribute :server_aliases, :kind_of => [Array, NilClass], :default => nil
+# Actually defaults to "#{application.name}.conf.erb", but nil means it wasn't set by the user
+attribute :webapp_template, :kind_of => [String, NilClass], :default => nil
+attribute :params, :kind_of => [Hash, NilClass], :default => nil
