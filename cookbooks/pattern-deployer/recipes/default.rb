@@ -1,16 +1,14 @@
-#
-# Cookbook Name:: pattern-deployer
-# Recipe:: default
-#
-# Copyright 2013, YOUR_COMPANY_NAME
-#
-# All rights reserved - Do Not Redistribute
-#
+user node["pattern_deployer"]["user"]
+
+group node["pattern_deployer"]["group"] do
+  members [ node["pattern_deployer"]["user"] ]
+end
 
 database_name = node["pattern_deployer"]["database"]["name"]
 username = node["pattern_deployer"]["database"]["username"]
 password = node["pattern_deployer"]["database"]["password"]
 dbms = node["pattern_deployer"]["database"]["system"]
+adapter = node["pattern_deployer"]["database"]["adapter"]
 
 case dbms
 when "mysql"
@@ -31,7 +29,7 @@ when "postgresql"
   db_provider = Chef::Provider::Database::Postgresql
   user_provider = Chef::Provider::Database::PostgresqlUser
   connection_info = {
-    :host =>  "127.0.0.1"
+    :host =>  "127.0.0.1",
     :port => node["postgresql"]["config"]["port"],
     :username => "postgres",
     :password => node["postgresql"]["password"]["postgres"]
@@ -70,17 +68,89 @@ database_user username do
   action :grant
 end
 
+include_recipe "git"
+
 application "pattern-deployer" do
+  name "pattern-deployer"
+  owner node["pattern_deployer"]["user"]
+  group node["pattern_deployer"]["group"]
   path node["pattern_deployer"]["deploy_to"]
   repository "https://github.com/ceraslabs/pattern-deployer.git"
+  action :force_deploy # if node.chef_environment == "development"
+  migrate true
 
   rails do
+    gems %w{ bundler }
+
     database do
       host "localhost"
       database database_name
       username username
       password password
-      adapter node["pattern_deployer"]["database"]["adapter"]
+      adapter adapter
+    end
+  end
+
+  passenger_demo do
+    service_name node["pattern_deployer"]["service_name"]
+  end
+
+  before_restart do
+    chef_repo_dir = "#{node["pattern_deployer"]["deploy_to"]}/current/chef-repo"
+    chef_config_dir = node["pattern_deployer"]["chef"]["config_dir"]
+
+    template "#{chef_config_dir}/knife.rb" do
+      source "knife.rb.erb"
+      owner node["pattern_deployer"]["user"]
+      group node["pattern_deployer"]["group"]
+      mode 0664
+      variables(
+        :log_level => :info,
+        :log_location => "STDOUT",
+        :chef_server_url => node["pattern_deployer"]["chef"]["chef_server_url"],
+        :syntax_check_cache_path => File.join(chef_config_dir, "syntax_check_cache")
+      )
+    end
+
+    template "#{chef_config_dir}/validation.pem" do
+      source "validation.pem.erb"
+      owner node["pattern_deployer"]["user"]
+      group node["pattern_deployer"]["group"]
+      mode 0660
+    end
+
+    template "#{chef_config_dir}/client.pem" do
+      source "client.pem.erb"
+      owner node["pattern_deployer"]["user"]
+      group node["pattern_deployer"]["group"]
+      mode 0660
+    end
+
+    ruby_block "upload_cookbooks" do
+      block do
+        cookbooks_to_upload = Array.new
+        Dir.foreach("#{chef_repo_dir}/cookbooks") do |file|
+          next if !File.directory?("#{chef_repo_dir}/cookbooks/#{file}") || file == "." || file == ".."
+          cookbooks_to_upload << file
+        end
+
+        progress = false
+        while cookbooks_to_upload.size > 0
+          cookbooks_to_upload.each do |cookbook|
+            command = "knife cookbook upload #{cookbook} -o '#{chef_repo_dir}/cookbooks' -c '#{chef_config_dir}/knife.rb'"
+            if system(command)
+              progress = true
+              cookbooks_to_upload.delete(cookbook)
+            end
+          end
+
+          if progress
+            progress = false
+          else
+            raise "failed to upload cookbooks #{cookbooks_to_upload.join(", ")}"
+          end
+        end
+      end
     end
   end
 end

@@ -18,6 +18,8 @@
 # limitations under the License.
 #
 
+include Chef::Mixin::LanguageIncludeRecipe
+
 action :before_compile do
 
   if new_resource.bundler.nil?
@@ -48,8 +50,6 @@ action :before_deploy do
   install_gems
 
   create_database_yml
-
-  generate_secret_token
 
 end
 
@@ -135,6 +135,9 @@ action :before_symlink do
 end
 
 action :before_restart do
+
+  generate_secret_token
+
 end
 
 action :after_restart do
@@ -149,6 +152,11 @@ end
 
 def install_gems
   new_resource.gems.each do |gem, opt|
+    if gem == "bundler"
+      %{ libxslt-dev libxml2-dev }.each do |package|
+        package package
+      end
+    end
     if opt.is_a?(Hash)
       ver = opt['version']
       src = opt['source']
@@ -181,21 +189,29 @@ end
 
 def generate_secret_token
 
+  app_dir = new_resource.release_path
+
   ruby_block "generate_token" do
     block do
-      node.set["rails"]["secret_token"] = `rake secret`
-      node.save
+      Dir.chdir(app_dir) do
+        if new_resource.bundler
+          command = "#{bundle_command} exec rake secret"
+        else
+          command = "rake secret"
+        end
+        node.set["rails"]["secret_token"] = `#{command}`.strip
+        node.save
+      end
     end
-    cwd new_resource.release_path
   end
 
-  file_path = ::File.join(new_resource.release_path, "config", "initializers", "secret_token.rb")
+  file_path = ::File.join(app_dir, "config", "initializers", "secret_token.rb")
 
   template file_path do
     source "secret_token.rb.erb"
     cookbook "application_ruby"
     owner new_resource.owner
     group new_resource.group
-    mode "644"
+    mode "660"
   end
 end
