@@ -97,7 +97,7 @@ application "pattern-deployer" do
 
   before_restart do
     chef_repo_dir = "#{node["pattern_deployer"]["deploy_to"]}/current/chef-repo"
-    chef_config_dir = node["pattern_deployer"]["chef"]["config_dir"]
+    chef_config_dir = node["pattern_deployer"]["chef"]["conf_dir"]
 
     template "#{chef_config_dir}/knife.rb" do
       source "knife.rb.erb"
@@ -151,6 +151,11 @@ application "pattern-deployer" do
           end
         end
       end
+    end
+
+    execute "generate_doc" do
+      command "bundle exec ruby generate_doc.rb"
+      cwd "#{node["pattern_deployer"]["deploy_to"]}/current"
     end
   end
 end
