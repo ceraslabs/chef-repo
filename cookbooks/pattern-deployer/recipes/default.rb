@@ -126,31 +126,9 @@ application "pattern-deployer" do
       mode 0660
     end
 
-    ruby_block "upload_cookbooks" do
-      block do
-        cookbooks_to_upload = Array.new
-        Dir.foreach("#{chef_repo_dir}/cookbooks") do |file|
-          next if !File.directory?("#{chef_repo_dir}/cookbooks/#{file}") || file == "." || file == ".."
-          cookbooks_to_upload << file
-        end
-
-        progress = false
-        while cookbooks_to_upload.size > 0
-          cookbooks_to_upload.each do |cookbook|
-            command = "knife cookbook upload #{cookbook} -o '#{chef_repo_dir}/cookbooks' -c '#{chef_config_dir}/knife.rb'"
-            if system(command)
-              progress = true
-              cookbooks_to_upload.delete(cookbook)
-            end
-          end
-
-          if progress
-            progress = false
-          else
-            raise "failed to upload cookbooks #{cookbooks_to_upload.join(", ")}"
-          end
-        end
-      end
+    execute "upload_all_cookbooks" do
+      cwd "#{chef_repo_dir}/cookbooks"
+      command "ruby upload_all_cookbooks.rb '#{chef_config_dir}/knife.rb'"
     end
 
     execute "generate_doc" do
