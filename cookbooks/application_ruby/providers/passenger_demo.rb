@@ -2,7 +2,7 @@ include Chef::Mixin::LanguageIncludeRecipe
 
 action :before_compile do
 
-  node[:passenger][:production][:service_name] = @new_resource.service_name
+  node.set[:passenger][:production][:service_name] = @new_resource.service_name
   node.save
 
   include_recipe "passenger::daemon"
