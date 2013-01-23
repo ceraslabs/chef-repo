@@ -81,6 +81,7 @@ application "pattern-deployer" do
 
   rails do
     gems %w{ bundler }
+    precompile_assets true
 
     database do
       host "localhost"
