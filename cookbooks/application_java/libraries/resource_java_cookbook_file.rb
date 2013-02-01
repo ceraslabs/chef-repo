@@ -24,8 +24,6 @@ class Chef
     class JavaCookbookFile < Chef::Resource::CookbookFile
 
       alias :user :owner
-      #alias :revision :checksum
-      #alias :repository :source
 
       def initialize(name, run_context=nil)
         super
@@ -50,6 +48,10 @@ class Chef
 
       def release_path
         @release_path ||= @deploy_to + "/releases/app.war"
+      end
+
+      def source
+        @source = "#{name}.war"
       end
 
       def method_missing(name, *args, &block)

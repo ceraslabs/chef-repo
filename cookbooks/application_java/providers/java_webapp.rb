@@ -24,6 +24,7 @@ action :before_compile do
   # include_recipe 'java'
 
   new_resource.strategy :java_cookbook_file
+
 end
 
 action :before_deploy do
@@ -44,10 +45,6 @@ action :before_restart do
 end
 
 action :after_restart do
-end
-
-def set_attributes(deploy_resource)
-  deploy_resource.source new_resource.war_file
 end
 
 protected
@@ -84,4 +81,5 @@ def create_context_file
       :war => "#{new_resource.path}/releases/app.war"
     )
   end
+
 end

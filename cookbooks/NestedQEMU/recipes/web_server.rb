@@ -65,7 +65,6 @@ application app_name do
   group "tomcat6"
 
   java_webapp do
-    war_file my_databag["war_file"]["name"]
     database do
       database db_databag["database"]["name"]
       datasource my_databag["war_file"]["datasource"]
