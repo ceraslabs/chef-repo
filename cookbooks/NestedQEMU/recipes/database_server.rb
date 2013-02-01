@@ -28,7 +28,8 @@ password = database_info["password"] || "mypass"
 case dbms
 when "mysql"
   #node.set['mysql']['port'] = port if port
-  #node.save
+  node.set['mysql']['bind_address'] = "0.0.0.0"
+  node.save
 
   include_recipe "database::mysql"
   include_recipe "mysql::server"
@@ -80,6 +81,7 @@ database_user username do
   database_name database_name
   host '%'
   action :grant
+  ignore_failure false
 end
 
 my_sql_script = my_databag["sql_script_file"]["name"]
@@ -87,10 +89,11 @@ if my_sql_script
   cookbook_file "/tmp/#{my_sql_script}" do
     source my_sql_script
   end
-  
+
   database database_name do
     connection connection_info
     sql { ::File.open("/tmp/#{my_sql_script}").read }
     action :query
+    ignore_failure false
   end
 end
