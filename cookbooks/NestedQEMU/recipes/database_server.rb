@@ -57,6 +57,7 @@ database_user username do
   password password
   provider user_provider
   action :create
+  ignore_failure true
 end
 
 ruby_block "update_connection_info_password" do
@@ -69,6 +70,7 @@ database database_name do
   connection connection_info
   provider db_provider
   action :create
+  ignore_failure true
 end
 
 database_user username do
@@ -92,59 +94,3 @@ if my_sql_script
     action :query
   end
 end
-
-=begin
-# install mysql
-mysql_installed = !`dpkg --get-selections | grep mysql`.empty?
-unless mysql_installed
-  include_recipe "NestedQEMU::common"
-
-  # install mysql
-  node["mysql"]["server_root_password"] = mysql_root_password
-  node.save
-  include_recipe "mysql::client"
-  include_recipe "mysql::server"
-
-  template "/tmp/grants.sql" do
-    source "grants.sql.erb"
-    mode "0600"
-    variables(
-      :database => database_name,
-      :username => mysql_username,
-      :password => mysql_password
-    )
-  end
-
-  execute "set-mysql-remote-access-privileges" do
-    command "mysql -u root -p#{mysql_root_password} < /tmp/grants.sql"
-  end
-end
-
-my_sql_script = my_databag["sql_script_file"]["name"]
-if my_sql_script
-  execute "create database" do
-    command "mysql -uroot -p#{mysql_root_password} -e 'create database if not exists #{database_name}'"
-  end
-
-  cookbook_file "/tmp/#{my_sql_script}" do
-    source my_sql_script
-  end
-
-  execute "run db script" do
-    command "mysql -uroot -p#{mysql_root_password} -D #{database_name} < /tmp/#{my_sql_script}"
-  end
-end
-
-template "/etc/mysql/my.cnf" do
-  source "my.cnf.erb"
-  owner "root"
-  group "root"
-  mode 0644
-  notifies :restart, "service[mysql]"
-end
-
-service "mysql" do
-  supports :status => true, :restart => true
-  action [ :start ]
-end
-=end
