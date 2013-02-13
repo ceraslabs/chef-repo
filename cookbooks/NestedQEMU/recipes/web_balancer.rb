@@ -71,6 +71,7 @@ template "/etc/apache2/conf.d/proxy-balancer.conf" do
   group "root"
   mode 0400
   variables(:vpnips => member_ips)
+  notifies :restart, "service[apache2]"
 end
 
 template "/etc/apache2/mods-available/proxy.conf" do
@@ -78,8 +79,9 @@ template "/etc/apache2/mods-available/proxy.conf" do
   owner "root"
   group "root"
   mode 0400
+  notifies :restart, "service[apache2]"
 end
 
 service "apache2" do
-  action :restart
+  action :nothing
 end
