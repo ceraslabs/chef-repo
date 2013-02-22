@@ -34,14 +34,7 @@ class Chef
         end
 
         def action_create
-          if exists?
-            begin
-              db.query("ALTER USER \"#{@new_resource.username}\" WITH PASSWORD '#{@new_resource.password}'")
-              @new_resource.updated_by_last_action(true)
-            ensure
-              close
-            end
-          else
+          unless exists?
             begin
               db("template1").query("CREATE USER \"#{@new_resource.username}\" WITH PASSWORD '#{@new_resource.password}'")
               @new_resource.updated_by_last_action(true)
