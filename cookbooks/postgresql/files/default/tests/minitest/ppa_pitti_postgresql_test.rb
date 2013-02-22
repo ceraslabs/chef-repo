@@ -21,7 +21,7 @@ describe 'postgresql::ppa_pitti_postgresql' do
 
   it 'creates the Pitti PPA sources.list' do
     skip unless %w{debian}.include?(node['platform_family'])
-    file("/etc/apt/sources.list.d/pitti-postgresql-ppa-source.list").must_exist
+    file("/etc/apt/sources.list.d/pitti-postgresql-ppa.list").must_exist
   end
 
   it 'installs postgresql-client-9.2' do

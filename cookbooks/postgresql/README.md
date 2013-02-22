@@ -46,10 +46,16 @@ The following attributes are set based on the platform, see the
   that should be installed on "client" systems.
 * `node['postgresql']['server']['packages']` - An array of package names
   that should be installed on "server" systems.
+* `node['postgresql']['contrib']['packages']` - An array of package names
+  that could be installed on "server" systems for useful sysadmin tools.
 
 * `node['postgresql']['enable_pitti_ppa']` - Whether to enable the PPA
   by Martin Pitti, which contains newer versions of PostgreSQL. See
   __Recipes__ "`ppa_pitti_postgresql`" below for more information.
+
+* `node['postgresql']['enable_pgdg_yum']` - Whether to enable the yum repo
+  by the PostgreSQL Global Development Group, which contains newer versions
+  of PostgreSQL.
 
 The following attributes are generated in
 `recipe[postgresql::server]`.
@@ -174,6 +180,16 @@ database, and manages the postgresql service. You should include the
 `postgresql::server` recipe, which will include this on RHEL/Fedora
 platforms.
 
+contrib
+-------
+
+Installs the packages defined in the
+`node['postgresql']['contrib']['packages']` attribute.
+This is the contrib directory of the PostgreSQL distribution, which
+includes porting tools, analysis utilities, and plug-in features that
+database engineers often require. Some (like pgbench) are executable.
+Others (like pg_buffercache) should be installed into the database.
+
 ppa\_pitti\_postgresql
 ----------------------
 
@@ -184,6 +200,27 @@ attribute is true. Also set the
 `node['postgresql']['server]['packages']` to the list of packages to
 use from this repository, and set the `node['postgresql']['version']`
 attribute to the version to use (e.g., "9.2").
+
+yum\_pgdg\_postgresql
+---------------------
+
+Enables the PostgreSQL Global Development Group yum repository
+maintained by Devrim G&#252;nd&#252;z for updated PostgreSQL packages.
+(The PGDG is the groups that develops PostgreSQL.)
+Automatically included if the `node['postgresql']['enable_pgdg_yum']`
+attribute is true. Also use `override_attributes` to set a number of
+values that will need to have embedded version numbers. For example:
+
+    node['postgresql']['enable_pgdg_yum'] = true
+    node['postgresql']['version'] = "9.2"
+    node['postgresql']['dir'] = "/var/lib/pgsql/9.2/data"
+    node['postgresql']['client']['packages'] = ["postgresql92"]
+    node['postgresql']['server']['packages'] = ["postgresql92-server"]
+    node['postgresql']['server']['service_name'] = "postgresql-9.2"
+    node['postgresql']['contrib']['packages'] = ["postgresql92-contrib"]
+
+You may set `node['postgresql']['pgdg']['repo_rpm_url']` attributes
+to pick up recent [PGDG repo packages](http://yum.postgresql.org/repopackages.php).
 
 Resources/Providers
 ===================
