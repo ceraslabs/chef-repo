@@ -14,10 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-user node["pattern_deployer"]["user"]
+
+new_user_home = "/home/#{node["pattern_deployer"]["user"]}"
+
+user node["pattern_deployer"]["user"] do
+  home new_user_home
+  supports(:manage_home => true)
+end
 
 group node["pattern_deployer"]["group"] do
   members [ node["pattern_deployer"]["user"] ]
+end
+
+node.set["pattern_deployer"]["deploy_to"] = "#{new_user_home}/pattern-deployer"
+node.set["pattern_deployer"]["chef"]["api_client_key_path"] = "#{new_user_home}/.chef/client.pem"
+node.set["pattern_deployer"]["chef"]["validation_key_path"] = "#{new_user_home}/.chef/validation.pem"
+node.save
+
+directory "#{new_user_home}/.chef" do
+  owner node["pattern_deployer"]["user"]
+  group node["pattern_deployer"]["group"]
 end
 
 database_name = node["pattern_deployer"]["database"]["name"]
@@ -69,12 +85,6 @@ ruby_block "update_connection_info_password" do
   end
 end
 
-database database_name do
-  connection connection_info
-  provider db_provider
-  action :create
-end
-
 database_user username do
   connection connection_info
   password password
@@ -86,6 +96,22 @@ end
 
 include_recipe "git"
 
+node.set["languages"]["ruby"]["default_version"] = "1.8"
+node.save
+
+include_recipe "ruby"
+include_recipe "ruby::symlinks"
+
+script "install_rubygems" do
+  interpreter "bash"
+  cwd "/tmp"
+  code <<-EOH
+    curl -O http://production.cf.rubygems.org/rubygems/rubygems-1.8.10.tgz
+    tar zxf rubygems-1.8.10.tgz
+    sudo ruby rubygems-1.8.10/setup.rb --no-format-executable
+  EOH
+end
+
 application "pattern-deployer" do
   name "pattern-deployer"
   owner node["pattern_deployer"]["user"]
@@ -93,12 +119,8 @@ application "pattern-deployer" do
   path node["pattern_deployer"]["deploy_to"]
   repository "https://github.com/ceraslabs/pattern-deployer.git"
   action :force_deploy # if node.chef_environment == "development"
-  migrate true
 
   rails do
-    gems %w{ bundler }
-    precompile_assets true
-
     database do
       host "localhost"
       database database_name
@@ -106,50 +128,64 @@ application "pattern-deployer" do
       password password
       adapter adapter
     end
-  end
 
-  passenger_demo do
-    service_name node["pattern_deployer"]["service_name"]
+    restart_command do
+      execute "stop_the_app" do
+        command "bundle exec passenger stop -p 80"
+        cwd "#{node["pattern_deployer"]["deploy_to"]}/current"
+        ignore_failure true
+      end
+
+      execute "start_the_app" do
+        command "bundle exec passenger start -p 80 -e production -d --user=#{node["pattern_deployer"]["user"]}"
+        cwd "#{node["pattern_deployer"]["deploy_to"]}/current"
+      end
+    end
   end
 
   before_restart do
-    chef_repo_dir = "#{node["pattern_deployer"]["deploy_to"]}/current/chef-repo"
-    chef_config_dir = node["pattern_deployer"]["chef"]["conf_dir"]
-
-    template "#{chef_config_dir}/knife.rb" do
-      source "knife.rb.erb"
-      owner node["pattern_deployer"]["user"]
-      group node["pattern_deployer"]["group"]
-      mode 0664
-      variables(
-        :log_level => :info,
-        :log_location => "STDOUT",
-        :chef_server_url => node["pattern_deployer"]["chef"]["chef_server_url"],
-        :syntax_check_cache_path => File.join(chef_config_dir, "syntax_check_cache")
-      )
-    end
-
-    template "#{chef_config_dir}/validation.pem" do
+    template node["pattern_deployer"]["chef"]["validation_key_path"] do
       source "validation.pem.erb"
       owner node["pattern_deployer"]["user"]
       group node["pattern_deployer"]["group"]
       mode 0660
     end
 
-    template "#{chef_config_dir}/client.pem" do
+    template node["pattern_deployer"]["chef"]["api_client_key_path"] do
       source "client.pem.erb"
       owner node["pattern_deployer"]["user"]
       group node["pattern_deployer"]["group"]
       mode 0660
     end
 
-    execute "upload_all_cookbooks" do
-      cwd "#{chef_repo_dir}/cookbooks"
-      command "ruby upload_all_cookbooks.rb '#{chef_config_dir}/knife.rb'"
+    # install passenger dependencies
+    case node["platform"]
+    when "ubuntu"
+      packages = %w{ libssl-dev libcurl4-openssl-dev libxslt-dev libxml2-dev }
+    else
+      #TODO
     end
 
-    execute "generate_doc" do
-      command "bundle exec ruby generate_doc.rb"
+    packages.each do |package|
+      package package
+    end
+
+    %w{ mixlib-cli json }.each do |gem|
+      gem_package gem
+    end
+
+    execute "setup_the_app" do
+      command "ruby setup.rb production "\
+                 "--defaults "\
+                 "--as-user #{node["pattern_deployer"]["user"]} "\
+                 "--db-user '#{username}' "\
+                 "--db-password '#{password}' "\
+                 "--db-name '#{database_name}' "\
+                 "--chef-client-key '#{node["pattern_deployer"]["chef"]["api_client_key_path"]}' "\
+                 "--chef-client-name '#{node["pattern_deployer"]["chef"]["api_client_name"]}' "\
+                 "--chef-server '#{node["pattern_deployer"]["chef"]["chef_server_url"]}' "\
+                 "--chef-validation-key '#{node["pattern_deployer"]["chef"]["validation_key_path"]}' "
+
       cwd "#{node["pattern_deployer"]["deploy_to"]}/current"
     end
   end

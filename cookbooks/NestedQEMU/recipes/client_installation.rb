@@ -25,6 +25,11 @@ my_databag = data_bag_item(node.name, node.name)
 if chef_server?
   ruby_block "set_keys" do
     block do
+      if node.has_key?("cloud") && node["cloud"]["public_ipv4"]
+        node.set["pattern_deployer"]["chef"]["chef_server_url"] = "http://#{node["cloud"]["public_ipv4"]}:4000"
+      else
+        node.set["pattern_deployer"]["chef"]["chef_server_url"] = "http://#{my_databag["public_ip"]}:4000"
+      end
       node.set["pattern_deployer"]["chef"]["api_client_name"]        = node["output"]["chef_api_client_name"]
       node.set["pattern_deployer"]["chef"]["api_client_key"]         = node["output"]["chef_api_client_key"]
       node.set["pattern_deployer"]["chef"]["validation_client_name"] = node["output"]["chef_validation_client_name"]

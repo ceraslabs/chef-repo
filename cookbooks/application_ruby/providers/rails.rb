@@ -49,7 +49,9 @@ action :before_deploy do
 
   install_gems
 
-  create_database_yml
+  # Pattern-deployer created database.yml in setup.py, so it don't need to be created here.
+  # TODO In long term, we should support option to turn on/off database.yml creation
+  #create_database_yml
 
 end
 
@@ -135,9 +137,6 @@ action :before_symlink do
 end
 
 action :before_restart do
-
-  generate_secret_token
-
 end
 
 action :after_restart do
@@ -184,34 +183,5 @@ def create_database_yml
       :database => new_resource.database,
       :rails_env => new_resource.environment_name
     )
-  end
-end
-
-def generate_secret_token
-
-  app_dir = new_resource.release_path
-
-  ruby_block "generate_token" do
-    block do
-      Dir.chdir(app_dir) do
-        if new_resource.bundler
-          command = "#{bundle_command} exec rake secret"
-        else
-          command = "rake secret"
-        end
-        node.set["rails"]["secret_token"] = `#{command}`.strip
-        node.save
-      end
-    end
-  end
-
-  file_path = ::File.join(app_dir, "config", "initializers", "secret_token.rb")
-
-  template file_path do
-    source "secret_token.rb.erb"
-    cookbook "application_ruby"
-    owner new_resource.owner
-    group new_resource.group
-    mode "660"
   end
 end

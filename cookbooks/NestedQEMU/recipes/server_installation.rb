@@ -16,6 +16,11 @@
 #
 include_recipe "NestedQEMU::common"
 
+node.set['build_essential']['compiletime'] = true
+node.save
+
+include_recipe "build-essential"
+
 node.set["chef_server"]["webui_enabled"] = true
 node.save
 
