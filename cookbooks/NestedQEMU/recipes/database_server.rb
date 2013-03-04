@@ -84,15 +84,16 @@ database_user username do
   ignore_failure false
 end
 
-my_sql_script = my_databag["sql_script_file"]["name"]
-if my_sql_script  
-  cookbook_file "/tmp/#{my_sql_script}" do
-    source my_sql_script
+sql_script = my_databag["sql_script_file"]["name"]
+sql_script_path = "/tmp/#{sql_script}" if sql_script
+unless ::File.exists?(sql_script_path)
+  cookbook_file sql_script_path do
+    source sql_script
   end
 
   database database_name do
     connection connection_info
-    sql { ::File.open("/tmp/#{my_sql_script}").read }
+    sql { ::File.open(sql_script_path).read }
     action :query
     ignore_failure false
   end
