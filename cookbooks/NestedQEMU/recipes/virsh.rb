@@ -16,6 +16,7 @@
 #
 include_recipe "NestedQEMU::common"
 
+my_databag = data_bag_item(node.name, node.name)
 
 ["qemu", "libvirt-bin"].each do |pkg|
   package pkg do
@@ -23,92 +24,90 @@ include_recipe "NestedQEMU::common"
   end.run_action(:install)
 end
 
-redirs = []
-raw_redirs = node["databags"]["qemu"][node.name]
-raw_redirs.each do |redir|
-  if redir.start_with?("tcp:80::")
-    # since port 80 is privileged port, we setup the iptables rule to forward it to port 8080
-    redir = redir.sub("tcp:80::", "tcp:8080::")
-    execute "iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080" do
-      command "iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080"
-    end
-  end
-  redirs << redir
+domains = Array.new
+`virsh list --all`.each_line do |line|
+  tokens = line.split
+  domains << tokens[1] if tokens.size > 1 && /[\-\d]/ =~tokens[0]
 end
 
-nested_hosts = []
-node["databags"]["dependencies"]["dependencies"].each do |d|
-  nested_hosts << d["from"] if d["to"] == node.name
+active_domains = Array.new
+`virsh list`.each_line do |line|
+  tokens = line.split
+  active_domains << tokens[1] if tokens.size > 1 && /[\d]/ =~tokens[0]
 end
 
-template = nil
+
+#template = nil
 cwd = "/home/ubuntu/images"
-nested_hosts.each do |hostname|
-  image_name = "encrypted_#{hostname}"
-  if template.nil?
-    execute "rename image #{hostname}" do
-      command "mv qemu #{image_name}"
-      cwd cwd
-      action :nothing
-    end.run_action(:run)
-    template = image_name
-  else
-    execute "rename image #{hostname}" do
-      command "cp #{template} #{image_name}"
-      cwd cwd
-      action :nothing
-    end.run_action(:run)
+
+directory cwd do
+  owner "ubuntu"
+  group "ubuntu"
+  action :nothing
+end.run_action(:create)
+
+my_databag["nested_instances"].each do |nested_instance|
+  hostname = nested_instance["host"]
+  image_file = nested_instance["image_file"]
+  image_url = nested_instance["image_url"]
+
+  if image_file.nil? && image_url.nil?
+    raise "Failed get image file. Please make sure either image_file or image_url element is present"
   end
 
-  execute "change owner of image #{hostname}" do
-    command "chown ubuntu:ubuntu #{image_name}"
-    cwd cwd
-    action :nothing
-  end.run_action(:run)
-  
-  mount_dir = hostname
-  directory "#{cwd}/#{mount_dir}" do
-    owner "ubuntu"
-    group "ubuntu"
-    action :nothing
-  end.run_action(:create)
+  image_file ||= File.basename(URI::parse(image_url).path)
+  image_file = "#{Chef::Config[:file_cache_path]}/#{image_file}" unless Pathname.new(image_file).absolute?
 
-  password = "qemu"
-  execute "decrypt qemu image #{hostname}" do
-    command "truecrypt --non-interactive #{image_name} #{mount_dir} -p #{password}"
-    user "ubuntu"
-    group "ubuntu"
-    cwd cwd
-    action :nothing
-  end.run_action(:run)
+  if !File.exists?(image_file) && image_url.nil?
+    railse "Failed get image file. Please make sure image_file is present or provide and URL to download it"
+  end
 
-  # The folder mount_dir should be created as owner of ubuntu, but it doesn't, possibly due to a bug.
-  execute "change owner #{mount_dir}" do
-    command "chown -R ubuntu:ubuntu #{mount_dir}"
-    cwd cwd
+  remote_file image_file do
+    source image_url
     action :nothing
+  end.run_action(:create_if_missing)
+
+  hosting_image = "#{cwd}/#{hostname}.img"
+
+  execute "copy_image_#{hosting_image}" do
+    command "cp #{image_file} #{hosting_image}"
+    not_if do
+      ::File.exists?(hosting_image)
+    end
   end.run_action(:run)
 
-  template "/etc/libvirt/qemu/#{hostname}.xml" do
-    source "debian.xml.erb"
+  port_redirs = nested_instance["port_redirs"].map do |r|
+    "tcp:#{r["from"]}::#{r["to"]}"
+  end
+
+  template "/tmp/#{hostname}.xml" do
+    source "libvirt_domain.xml.erb"
     owner "root"
     group "root"
     mode 0644
     variables(
-      :redirs => redirs,
+      :redirs => port_redirs,
       :hostname => hostname,
-      :image => "#{cwd}/#{mount_dir}/debian_hd.img"
+      :memory => nested_instance["memory"],
+      :image_format => nested_instance["image_format"],
+      :image_file_path => hosting_image
     )
     action :nothing
   end.run_action(:create)
 
   execute "define-inner-instance #{hostname}" do
-    command "virsh define /etc/libvirt/qemu/#{hostname}.xml"
+    command "virsh define /tmp/#{hostname}.xml"
     action :nothing
+    not_if do
+      domains.include?(hostname)
+    end
   end.run_action(:run)
 
   execute "start-inner-instance #{hostname}" do
     command "virsh start #{hostname}"
     action :nothing
+    not_if do
+      active_domains.include?(hostname)
+    end
   end.run_action(:run)
 end

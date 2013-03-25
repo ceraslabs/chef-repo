@@ -29,6 +29,10 @@ end
 execute "apt-get update" do
   command "apt-get update"
   ignore_failure true
+  only_if do
+    ::File.exists?('/var/lib/apt/periodic/update-success-stamp') &&
+    ::File.mtime('/var/lib/apt/periodic/update-success-stamp') < Time.now - 86400 * 30
+  end
   action :nothing
 end
 
@@ -54,7 +58,7 @@ execute "apt-get-update-periodic" do
   ignore_failure true
   only_if do
     ::File.exists?('/var/lib/apt/periodic/update-success-stamp') &&
-    ::File.mtime('/var/lib/apt/periodic/update-success-stamp') < Time.now - 86400
+    ::File.mtime('/var/lib/apt/periodic/update-success-stamp') < Time.now - 86400 * 30
   end
 end
 
@@ -63,6 +67,5 @@ end
     owner "root"
     group "root"
     mode  00755
-    action :create
   end
 end

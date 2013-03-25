@@ -20,6 +20,13 @@ include_recipe "apt"
 # install exception handler
 include_recipe "chef_handler"
 
+# sync clock every 5 mins
+cron "sync_clock" do
+  command "/usr/sbin/ntpdate ntp.ubuntu.com"
+  minute "*/5"
+  action :nothing
+end.run_action(:create)
+
 #databag = data_bag_item(node.name, node.name).to_hash
 #if databag.has_key?("topology_id")
 #  node.set["topology_id"] = databag["topology_id"]
