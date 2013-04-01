@@ -18,6 +18,10 @@ include_recipe "NestedQEMU::common"
 
 my_databag = data_bag_item(node.name, node.name)
 
+execute "apt-get update" do
+  action :nothing
+end.run_action(:run)
+
 ["qemu", "libvirt-bin"].each do |pkg|
   package pkg do
     action :nothing
@@ -36,20 +40,44 @@ active_domains = Array.new
   active_domains << tokens[1] if tokens.size > 1 && /[\d]/ =~tokens[0]
 end
 
+username = node["current_user"]
+user_home = "#{node["user"]["home_root"]}/#{username}"
 
-#template = nil
-cwd = "/home/ubuntu/images"
-
-directory cwd do
-  owner "ubuntu"
-  group "ubuntu"
+user_account username do
   action :nothing
 end.run_action(:create)
 
-my_databag["nested_instances"].each do |nested_instance|
-  hostname = nested_instance["host"]
-  image_file = nested_instance["image_file"]
-  image_url = nested_instance["image_url"]
+ruby_block "save_user_public_key" do
+  block do
+    node.set["output"]["user_public_key"] = `cat #{user_home}/.ssh/id_dsa.pub`
+    node.save
+  end
+  action :nothing
+end.run_action(:create)
+
+cwd = "#{user_home}/images"
+
+directory cwd do
+  owner username
+  group username
+  action :nothing
+end.run_action(:create)
+
+nested_nodes_infos = my_databag["nested_nodes_infos"] || Array.new
+
+migration = my_databag["migration"]
+if migration && migration["destination"] == node.name
+  incoming_domain = migration["domain"]
+  unless nested_nodes_infos.find{ |nni| nni["host"] == incoming_domain }
+    source_node = migration["source"]
+    nested_nodes_infos << data_bag_item(source_node, source_node)["nested_nodes_infos"].find{ |nni| nni["host"] == incoming_domain }
+  end
+end
+
+nested_nodes_infos.each do |nested_node_info|
+  domain = nested_node_info["host"]
+  image_file = nested_node_info["image_file"]
+  image_url = nested_node_info["image_url"]
 
   if image_file.nil? && image_url.nil?
     raise "Failed get image file. Please make sure either image_file or image_url element is present"
@@ -67,7 +95,7 @@ my_databag["nested_instances"].each do |nested_instance|
     action :nothing
   end.run_action(:create_if_missing)
 
-  hosting_image = "#{cwd}/#{hostname}.img"
+  hosting_image = "#{cwd}/#{domain}.img"
 
   execute "copy_image_#{hosting_image}" do
     command "cp #{image_file} #{hosting_image}"
@@ -76,38 +104,39 @@ my_databag["nested_instances"].each do |nested_instance|
     end
   end.run_action(:run)
 
-  port_redirs = nested_instance["port_redirs"].map do |r|
+  # don't need to define&start domain that is migrating in
+  next if domain == incoming_domain
+
+  port_redirs = nested_node_info["port_redirs"].map do |r|
     "tcp:#{r["from"]}::#{r["to"]}"
   end
 
-  template "/tmp/#{hostname}.xml" do
+  template "/tmp/#{domain}.xml" do
     source "libvirt_domain.xml.erb"
-    owner "root"
-    group "root"
     mode 0644
     variables(
       :redirs => port_redirs,
-      :hostname => hostname,
-      :memory => nested_instance["memory"],
-      :image_format => nested_instance["image_format"],
+      :hostname => domain,
+      :memory => nested_node_info["memory"],
+      :image_format => nested_node_info["image_format"],
       :image_file_path => hosting_image
     )
     action :nothing
   end.run_action(:create)
 
-  execute "define-inner-instance #{hostname}" do
-    command "virsh define /tmp/#{hostname}.xml"
+  execute "define-inner-instance #{domain}" do
+    command "virsh define /tmp/#{domain}.xml"
     action :nothing
     not_if do
-      domains.include?(hostname)
+      domains.include?(domain)
     end
   end.run_action(:run)
 
-  execute "start-inner-instance #{hostname}" do
-    command "virsh start #{hostname}"
+  execute "start-inner-instance #{domain}" do
+    command "virsh start #{domain}"
     action :nothing
     not_if do
-      active_domains.include?(hostname)
+      active_domains.include?(domain)
     end
   end.run_action(:run)
 end

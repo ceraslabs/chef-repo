@@ -126,6 +126,9 @@ end
 def authorized_keys_resource(exec_action)
   # avoid variable scoping issues in resource block
   ssh_keys = Array(new_resource.ssh_keys)
+  `cat #{@my_home}/.ssh/authorized_keys`.each_line do |key|
+    ssh_keys << key unless ssh_keys.include?(key)
+  end
 
   r = template "#{@my_home}/.ssh/authorized_keys" do
     cookbook    'user'
@@ -155,7 +158,9 @@ def keygen_resource(exec_action)
       chmod 0644 #{my_home}/.ssh/id_dsa.pub
     KEYGEN
     action    :nothing
-
+    not_if do
+      ::File.exists?("#{my_home}/.ssh/id_dsa.pub")
+    end
     creates   "#{my_home}/.ssh/id_dsa"
   end
   e.run_action(:run) if @ssh_keygen && exec_action == :create

@@ -16,18 +16,22 @@
 #
 include_recipe "chef_handler"
 
-databag = data_bag_item(node.name, node.name)
-target_vm = databag["vm_to_migrate"]
-destination_url = databag["migrate_to"]
+my_databag = data_bag_item(node.name, node.name)
 
-result = `echo /etc/ssh/ssh_config | grep "StrictHostKeyChecking no"`
-if result.empty?
-  execute "disable_host_key_verification" do
-    command "echo \"StrictHostKeyChecking no\" >> /etc/ssh/ssh_config"
+migration = my_databag["migration"]
+raise "Unexpected missing of migration info" if migration.nil?
+
+domain = migration["domain"]
+dest_node_name = migration["destination"]
+destination_ip = data_bag_item(dest_node_name, dest_node_name)["public_ip"]
+
+ssh_known_hosts_entry destination_ip
+
+username = node["current_user"]
+migration_cmd = "virsh migrate --live --persistent --verbose --copy-storage-inc #{domain} qemu+ssh://#{username}@#{destination_ip}/system"
+
+ruby_block "vm_migrate" do
+  block do
+    system "su #{username} -c '#{migration_cmd}'"
   end
-end
-
-execute "vm_migrate" do
-  #command "virsh migrate --live --persistent --undefinesource --copy-storage-inc --verbose #{target_vm} qemu+ssh://ubuntu@#{destination_url}/system"
-  command "virsh migrate --live --persistent --verbose --copy-storage-inc #{target_vm} qemu+ssh://ubuntu@#{destination_url}/system"
 end

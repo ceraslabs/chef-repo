@@ -16,28 +16,16 @@
 #
 include_recipe "chef_handler"
 
-directory = "/root/.ssh"
-private_key_file = "#{directory}/id_rsa"
-public_key_file = "#{directory}/id_rsa.pub"
-file private_key_file do
-  action :delete
-end
+my_databag = data_bag_item(node.name, node.name)
 
-file public_key_file do
-  action :delete
-end
+migration = my_databag["migration"]
+raise "Unexpected missing of migration info" if migration.nil?
 
-directory directory do
-  action :create
-end
+source_node_name = migration["source"]
+user_public_key = data_bag_item(source_node_name, source_node_name)["user_public_key"]
+authorized_keys = [user_public_key]
 
-execute "generate_key" do
-  command "ssh-keygen -q -t rsa -N \"\" -f #{private_key_file}"
-end
-
-ruby_block "save_key" do
-  block do
-    node["ssh_key"] = `cat #{public_key_file}`
-    node.save
-  end
-end
+user_account node["current_user"] do
+  ssh_keys authorized_keys
+  action :nothing
+end.run_action(:create)
