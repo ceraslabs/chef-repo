@@ -32,6 +32,7 @@ migration_cmd = "virsh migrate --live --persistent --verbose --copy-storage-inc 
 
 ruby_block "vm_migrate" do
   block do
-    system "su #{username} -c '#{migration_cmd}'"
+    success = system "su #{username} -c '#{migration_cmd}'"
+    raise "Failed to migrate domain '#{domain}' to destination host '#{dest_node_name}'(#{destination_ip})." unless success
   end
 end
