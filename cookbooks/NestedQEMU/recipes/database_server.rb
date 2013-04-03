@@ -84,17 +84,23 @@ database_user username do
   ignore_failure false
 end
 
-sql_script = my_databag["sql_script_file"]["name"]
-sql_script_path = "/tmp/#{sql_script}" if sql_script
-unless ::File.exists?(sql_script_path)
-  cookbook_file sql_script_path do
-    source sql_script
+if my_databag["sql_script_file"]
+  sql_script_file = my_databag["sql_script_file"]["name"]
+  raise "Unexpected missing of sql script file name" unless sql_script_file
+  sql_script_file_path = "/tmp/#{sql_script_file}"
+
+  cookbook_file sql_script_file_path do
+    source sql_script_file
+    not_if do
+      ::File.exists?(sql_script_file_path)
+    end
   end
 
   database database_name do
     connection connection_info
-    sql { ::File.open(sql_script_path).read }
-    action :query
+    sql { ::File.open(sql_script_file_path).read }
+    action :nothing
     ignore_failure false
+    subscribes :query, resources(:cookbook_file => sql_script_file_path), :immediately
   end
 end
