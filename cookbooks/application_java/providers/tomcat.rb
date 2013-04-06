@@ -44,6 +44,12 @@ action :before_deploy do
     notifies :restart, resources(:service => "tomcat")
   end
 
+  cookbook_file "#{node['tomcat']['home']}/lib/mysql-connector-java-5.1.10-bin.jar" do
+    cookbook "application_java"
+    action :create_if_missing
+    mode 0644
+  end
+
 end
 
 action :before_migrate do
