@@ -2,7 +2,23 @@ directory "/etc/ganglia-webfrontend"
 
 case node[:platform]
 when "ubuntu", "debian"
-  package "ganglia-webfrontend"
+  if node[:platform] == "ubuntu" && node[:platform_version] == "11.10"
+    # walk around for an issue(https://bugs.launchpad.net/ubuntu/+source/ganglia/+bug/854866)
+    apt_repository "add_ganglia_ppa" do
+      uri "http://ppa.launchpad.net/mark-mims/ppa/ubuntu"
+      distribution node['lsb']['codename']
+      components ["main"]
+      deb_src true
+      keyserver "keyserver.ubuntu.com"
+      key "6DF5770B"
+    end
+
+    apt_package "ganglia-webfrontend" do
+      version "3.1.7-2ubuntu4"
+    end
+  else
+    package "ganglia-webfrontend"
+  end
 
   link "/etc/apache2/sites-enabled/ganglia" do
     to "/etc/ganglia-webfrontend/apache.conf"

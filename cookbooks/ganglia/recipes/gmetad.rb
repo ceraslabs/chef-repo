@@ -1,6 +1,22 @@
 case node[:platform]
 when "ubuntu", "debian"
-  package "gmetad"
+  if node[:platform] == "ubuntu" && node[:platform_version] == "11.10"
+    # walk around for an issue(https://bugs.launchpad.net/ubuntu/+source/ganglia/+bug/854866)
+    apt_repository "add_ganglia_ppa" do
+      uri "http://ppa.launchpad.net/mark-mims/ppa/ubuntu"
+      distribution node['lsb']['codename']
+      components ["main"]
+      deb_src true
+      keyserver "keyserver.ubuntu.com"
+      key "6DF5770B"
+    end
+
+    apt_package "gmetad" do
+      version "3.1.7-2ubuntu4"
+    end
+  else
+    package "gmetad"
+  end
 when "redhat", "centos", "fedora"
   include_recipe "ganglia::source"
   execute "copy gmetad init script" do
@@ -20,8 +36,8 @@ case node[:ganglia][:unicast]
 when true
   template "/etc/ganglia/gmetad.conf" do
     source "gmetad.conf.erb"
-    variables( :hosts => "localhost",
-               :cluster_name => node[:ganglia][:cluster_name])
+    variables( :clusters => node[:ganglia][:clusters],
+               :gridname => node[:ganglia][:gridname] )
     notifies :restart, "service[gmetad]"
   end
   if node[:recipes].include? "iptables"
@@ -31,8 +47,8 @@ when false
   ips = search(:node, "*:*").map {|node| node.ipaddress}
   template "/etc/ganglia/gmetad.conf" do
     source "gmetad.conf.erb"
-    variables( :hosts => ips.join(" "),
-               :cluster_name => node[:ganglia][:cluster_name])
+    variables( :clusters => node[:ganglia][:clusters],
+               :gridname => node[:ganglia][:gridname] )
     notifies :restart, "service[gmetad]"
   end
 end

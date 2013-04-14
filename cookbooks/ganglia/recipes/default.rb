@@ -19,7 +19,34 @@
 
 case node[:platform]
 when "ubuntu", "debian"
-  package "ganglia-monitor"
+  template "/usr/sbin/policy-rc.d" do
+    mode 0755
+    owner "root"
+    group "root"
+    action :create
+  end
+
+  if node[:platform] == "ubuntu" && node[:platform_version] == "11.10"
+    # walk around for an issue(https://bugs.launchpad.net/ubuntu/+source/ganglia/+bug/854866)
+    apt_repository "add_ganglia_ppa" do
+      uri "http://ppa.launchpad.net/mark-mims/ppa/ubuntu"
+      distribution node['lsb']['codename']
+      components ["main"]
+      deb_src true
+      keyserver "keyserver.ubuntu.com"
+      key "6DF5770B"
+    end
+
+    apt_package "ganglia-monitor" do
+      version "3.1.7-2ubuntu4"
+    end
+  else
+    package "ganglia-monitor"
+  end
+
+  file "/usr/sbin/policy-rc.d" do
+    action :nothing
+  end
 when "redhat", "centos", "fedora"
   include_recipe "ganglia::source"
 
@@ -37,14 +64,12 @@ directory "/etc/ganglia"
 
 case node[:ganglia][:unicast]
 when true
-  host = search(:node, "role:#{node['ganglia']['server_role']} AND chef_environment:#{node.chef_environment}").map {|node| node.ipaddress}
-  if host.empty? 
-     host = "127.0.0.1"
-  end
   template "/etc/ganglia/gmond.conf" do
     source "gmond_unicast.conf.erb"
     variables( :cluster_name => node[:ganglia][:cluster_name],
-               :host => host )
+               :host => node[:ganglia][:host],
+               :mute => node[:ganglia][:mute],
+               :deaf => node[:ganglia][:deaf] )
     notifies :restart, "service[ganglia-monitor]"
   end
 when false
