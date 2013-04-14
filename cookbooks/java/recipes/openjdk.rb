@@ -60,7 +60,10 @@ if platform?("ubuntu","debian","redhat","centos","fedora","scientific","amazon")
         end
         java_name += "-i386" if arch == "i386" && node['platform_version'].to_f >= 12.04
         Chef::ShellOut.new("update-java-alternatives","-s", java_name, :returns => [0,2]).run_command
-        Chef::ShellOut.new("ln","-s", java_name, "default-java", :cwd => "/usr/lib/jvm").run_command
+        require "fileutils"
+        jdk_home = Dir.glob("#{java_home_parent}/java*#{jdk_version}*openjdk*#{arch}").first
+        jdk_home = Dir.glob("#{java_home_parent}/java*#{jdk_version}*openjdk").first if jdk_home.nil?
+        FileUtils.ln_sf jdk_home, java_home
       else
         # have to do this on ubuntu for version 7 because Ubuntu does
         # not currently set jdk 7 as the default jvm on installation
