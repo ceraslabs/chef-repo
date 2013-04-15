@@ -1,8 +1,8 @@
 ProxyPass /balancer-manager !
 ProxyPass / balancer://Valhalla_Cluster/
 <Proxy balancer://Valhalla_Cluster>
-<% @vpnips.each do |vpnip| -%>
-  BalancerMember http://<%= vpnip %>:80
+<% @member_urls.each do |url| -%>
+  BalancerMember <%= url %>
 <% end -%>
 </Proxy>
 <Location /balancer-manager>

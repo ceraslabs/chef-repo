@@ -21,12 +21,14 @@ my_databag = data_bag_item(node.name, node.name)
 migration = my_databag["migration"]
 raise "Unexpected missing of migration info" if migration.nil?
 
-domain = migration["domain"]
 dest_node_name = migration["destination"]
 destination_ip = data_bag_item(dest_node_name, dest_node_name)["public_ip"]
 
-ssh_known_hosts_entry destination_ip
+ssh_known_hosts_entry destination_ip do
+  action :create
+end
 
+domain = migration["domain"]
 username = node["current_user"]
 migration_cmd = "virsh migrate --live --persistent --verbose --copy-storage-inc #{domain} qemu+ssh://#{username}@#{destination_ip}/system"
 
@@ -34,5 +36,23 @@ ruby_block "vm_migrate" do
   block do
     success = system "su #{username} -c '#{migration_cmd}'"
     raise "Failed to migrate domain '#{domain}' to destination host '#{dest_node_name}'(#{destination_ip})." unless success
+  end
+end
+
+if migration["load_balancer"]
+  lb_node_name = migration["load_balancer"]
+  load_balancer_ip = data_bag_item(lb_node_name, lb_node_name)["public_ip"]
+
+  ssh_known_hosts_entry load_balancer_ip do
+    action :create
+  end
+
+  old_url = my_databag["public_ip"] + ":" + migration["application_port"]
+  new_url = destination_ip + ":" + migration["application_port"]
+  lb_update_command = "sudo sed -i 's/#{old_url}/#{new_url}/g' /etc/apache2/conf.d/proxy-balancer.conf && sudo service apache2 restart"
+
+  execute "upload_load_balancer" do
+    command "ssh ubuntu@#{load_balancer_ip} \"#{lb_update_command}\""
+    user username
   end
 end

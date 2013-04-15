@@ -36,7 +36,7 @@ else
 end
 
 my_databag = data_bag_item(node.name, node.name)
-member_ips = Array.new
+member_urls = Array.new
 my_databag["balancer_members"].each do |member_node|
   if my_databag["vpn_connected_nodes"] && my_databag["vpn_connected_nodes"].include?(member_node)
     timeout = my_databag["timeout_waiting_vpnip"]
@@ -54,7 +54,8 @@ my_databag["balancer_members"].each do |member_node|
     end
 
     if member_ip
-      member_ips << member_ip
+      port = data_bag_item(member_node, member_node)["application_port"] || "80"
+      member_urls << "http://#{member_ip}:#{port}"
       break
     elsif i != timeout
       sleep 1
@@ -70,7 +71,7 @@ template "/etc/apache2/conf.d/proxy-balancer.conf" do
   owner "root"
   group "root"
   mode 0400
-  variables(:vpnips => member_ips)
+  variables(:member_urls => member_urls)
   notifies :restart, "service[apache2]"
 end
 
