@@ -46,3 +46,16 @@ node.set[:ganglia][:unicast] = true
 node.save
 
 include_recipe "ganglia::default"
+
+if node[:recipes].include?("NestedQEMU::virsh")
+  metric_collecting_script = "/tmp/collect_domain_metric"
+  user = node["current_user"]
+
+  template metric_collecting_script do
+    mode 0755
+  end
+
+  cron "collect_domain_metric" do
+    command "/bin/bash #{metric_collecting_script} 2>&1 >> /var/log/collect_domain_metric.log"
+  end
+end

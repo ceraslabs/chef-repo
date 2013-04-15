@@ -1,0 +1,12 @@
+#!/bin/bash
+outputfile=/tmp/virttop.csv
+virt-top -c qemu:///system -n 2 --script --csv $outputfile
+
+while read line
+do
+  domain=`echo $line | cut -d, -f20`
+  cpu=`echo $line | cut -d, -f22`
+  if [[ "$cpu" =~ ^[0-9]+([.][0-9]+)?$ ]] ; then
+    gmetric -n ${domain}_cpu -v $cpu -t float -d 60
+  fi
+done < $outputfile

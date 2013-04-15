@@ -22,7 +22,7 @@ execute "apt-get update" do
   action :nothing
 end.run_action(:run)
 
-["qemu", "libvirt-bin"].each do |pkg|
+["qemu", "libvirt-bin", "virt-top"].each do |pkg|
   package pkg do
     action :nothing
   end.run_action(:install)
