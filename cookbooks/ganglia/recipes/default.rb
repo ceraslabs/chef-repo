@@ -45,7 +45,7 @@ when "ubuntu", "debian"
   end
 
   file "/usr/sbin/policy-rc.d" do
-    action :nothing
+    action :delete
   end
 when "redhat", "centos", "fedora"
   include_recipe "ganglia::source"
