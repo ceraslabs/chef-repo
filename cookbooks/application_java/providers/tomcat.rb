@@ -44,10 +44,12 @@ action :before_deploy do
     notifies :restart, resources(:service => "tomcat")
   end
 
-  cookbook_file "#{node['tomcat']['home']}/lib/mysql-connector-java-5.1.10-bin.jar" do
-    cookbook "application_java"
-    action :create_if_missing
-    mode 0644
+  %w{ mysql-connector-java-5.1.10-bin.jar postgresql-9.2-1002.jdbc4.jar }.each do |driver|
+    cookbook_file "#{node['tomcat']['home']}/lib/#{driver}" do
+      cookbook "application_java"
+      action :create_if_missing
+      mode 0644
+    end
   end
 
 end
