@@ -51,12 +51,19 @@ when "debian"
   include_recipe "postgresql::server_debian"
 end
 
+# This is a temprorary walkaround.
+# There is a bug in PostgreSQL that restarting postgresql server doesn't pickup change of port in config file.
+execute "restart_postgresql" do
+  command "service postgresql stop && service postgresql start"
+  action :nothing
+end
+
 template "#{node['postgresql']['dir']}/postgresql.conf" do
   source "postgresql.conf.erb"
   owner "postgres"
   group "postgres"
   mode 0600
-  notifies :restart, 'service[postgresql]', :immediately
+  notifies :run, 'execute[restart_postgresql]', :immediately
 end
 
 template "#{node['postgresql']['dir']}/pg_hba.conf" do
