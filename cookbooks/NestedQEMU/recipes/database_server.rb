@@ -21,13 +21,13 @@ my_databag = data_bag_item(node.name, node.name)
 database_info = my_databag["database"] || Hash.new
 dbms = database_info["system"] || "mysql"
 database_name = database_info["name"] || "mydb"
-username = database_info["user"] || "user"
+username = database_info["user"] || "myuser"
 password = database_info["password"] || "mypass"
-#port = database_info["port"]
+port = database_info["port"]
 
 case dbms
 when "mysql"
-  #node.set['mysql']['port'] = port if port
+  node.set['mysql']['port'] = port if port
   node.set['mysql']['bind_address'] = "0.0.0.0"
   node.save
 
@@ -38,7 +38,7 @@ when "mysql"
   user_provider = Chef::Provider::Database::MysqlUser
   connection_info = {:host => "localhost", :username => "root", :password => node["mysql"]["server_root_password"]}
 when "postgresql"
-  #node.set['postgresql']['config']['port'] = port if port
+  node.set['postgresql']['config']['port'] = port if port
   node.set['postgresql']['config']['listen_addresses'] = "*"
   node['postgresql']['pg_hba'] << {:type => "host", :db => "all", :user => "all", :addr => "0.0.0.0/0", :method => "md5"}
   node.save

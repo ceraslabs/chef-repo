@@ -76,15 +76,14 @@ if my_databag["database_node"] && my_databag["database_node"].first
         adapter db_databag["database"]["system"]
         username db_databag["database"]["user"]
         password db_databag["database"]["password"]
+        port db_databag["database"]["port"]
         max_active 200
         max_idle 30
         max_wait 10000
         if db_databag["database"]["system"] == "mysql"
           driver "com.mysql.jdbc.Driver"
-          port "3306"
         elsif db_databag["database"]["system"] == "postgresql"
           driver "org.postgresql.Driver" if db_databag["database"]["system"] == "postgresql"
-          port "5432"
         else
           raise "Unexpected dbms #{db_databag["database"]["system"]}"
         end
