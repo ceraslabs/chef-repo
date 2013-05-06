@@ -36,7 +36,8 @@ when "mysql"
 
   db_provider = Chef::Provider::Database::Mysql
   user_provider = Chef::Provider::Database::MysqlUser
-  connection_info = {:host => "localhost", :username => "root", :password => node["mysql"]["server_root_password"]}
+  connection_info = {:host => "localhost", :username => username, :password => password}
+  admin_connection_info = {:host => "localhost", :username => "root", :password => node["mysql"]["server_root_password"]}
 when "postgresql"
   node.set['postgresql']['config']['port'] = port if port
   node.set['postgresql']['config']['listen_addresses'] = "*"
@@ -48,13 +49,14 @@ when "postgresql"
 
   db_provider = Chef::Provider::Database::Postgresql
   user_provider = Chef::Provider::Database::PostgresqlUser
-  connection_info = {:host => "127.0.0.1", :port => node["postgresql"]["config"]["port"], :username => "postgres", :password => node["postgresql"]["password"]["postgres"]}
+  connection_info = {:host => "127.0.0.1", :port => port, :username => username, :password => password}
+  admin_connection_info = {:host => "127.0.0.1", :port => port, :username => "postgres", :password => node["postgresql"]["password"]["postgres"]}
 else
   raise "Unexpected database DBMS #{dbms}"
 end
 
 database_user username do
-  connection connection_info
+  connection admin_connection_info
   password password
   provider user_provider
   action :create
@@ -63,19 +65,19 @@ end
 
 ruby_block "update_connection_info_password" do
   block do
-    connection_info[:password] = password if dbms == "postgresql" && connection_info[:username] == username
+    admin_connection_info[:password] = password if dbms == "postgresql" && admin_connection_info[:username] == username
   end
 end
 
 database database_name do
-  connection connection_info
+  connection admin_connection_info
   provider db_provider
   action :create
   ignore_failure true
 end
 
 database_user username do
-  connection connection_info
+  connection admin_connection_info
   password password
   provider user_provider
   database_name database_name
