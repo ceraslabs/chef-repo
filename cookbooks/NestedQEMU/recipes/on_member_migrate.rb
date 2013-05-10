@@ -27,5 +27,5 @@ authorized_keys = [user_public_key]
 
 user_account node["current_user"] do
   ssh_keys authorized_keys
-  action :nothing
-end.run_action(:create)
+  action :create
+end

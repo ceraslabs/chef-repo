@@ -65,15 +65,6 @@ end.run_action(:create)
 
 nested_nodes_infos = my_databag["nested_nodes_infos"] || Array.new
 
-migration = my_databag["migration"]
-if migration && migration["destination"] == node.name
-  incoming_domain = migration["domain"]
-  unless nested_nodes_infos.find{ |nni| nni["host"] == incoming_domain }
-    source_node = migration["source"]
-    nested_nodes_infos << data_bag_item(source_node, source_node)["nested_nodes_infos"].find{ |nni| nni["host"] == incoming_domain }
-  end
-end
-
 nested_nodes_infos.each do |nested_node_info|
   domain = nested_node_info["host"]
   image_file = nested_node_info["image_file"]
@@ -103,9 +94,6 @@ nested_nodes_infos.each do |nested_node_info|
       ::File.exists?(hosting_image)
     end
   end.run_action(:run)
-
-  # don't need to define&start domain that is migrating in
-  next if domain == incoming_domain
 
   port_redirs = nested_node_info["port_redirs"].map do |r|
     "tcp:#{r["from"]}::#{r["to"]}"
