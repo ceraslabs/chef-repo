@@ -2,6 +2,6 @@
 outputfile=/tmp/virttop.csv
 while true ; do
   virt-top -c qemu:///system -n 2 --script --csv $outputfile
-  awk -F"," 'NR==3 { for (x=20; x<=NF; x+=8) { system("gmetric -n " $x "_cpu -v " $(x+2) " -t float 1>/var/log/collect_domain_metric.log 2>&1") } }' $outputfile
+  awk -F"," 'NR==3 { for (x=20; x<=NF; x+=10) { system("gmetric -n " $x "_cpu -v " $(x+2) " -t float 1>/var/log/collect_domain_metric.log 2>&1") } }' $outputfile
   sleep 20
 done
