@@ -30,7 +30,7 @@ end
 
 domain = migration["domain"]
 username = node["current_user"]
-migration_cmd = "virsh migrate --live --persistent --verbose --copy-storage-inc #{domain} qemu+ssh://#{username}@#{destination_ip}/system"
+migration_cmd = "virsh migrate --live --persistent --verbose --copy-storage-inc #{domain} qemu+ssh://#{username}@#{destination_ip}/system tcp://#{destination_ip}"
 
 ruby_block "vm_migrate" do
   block do
