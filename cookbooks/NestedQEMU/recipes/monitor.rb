@@ -20,20 +20,24 @@ my_databag = data_bag_item(node.name, node.name)
 
 # wait for ip address of the first node of cluster
 recv_node = node.name.sub(/_\d+$/, "_1")
-timeout = my_databag["timeout_waiting_ip"]
-for i in 1 .. timeout
-  if recv_node == node.name
-    recv_host = my_databag["public_ip"]
-  else
-    recv_host = data_bag_item(recv_node, recv_node)["public_ip"]
-  end
+if recv_node == node.name
+  recv_host = "localhost"
+else
+  timeout = my_databag["timeout_waiting_ip"]
+  for i in 1 .. timeout
+    if recv_node == node.name
+      recv_host = my_databag["public_ip"]
+    else
+      recv_host = data_bag_item(recv_node, recv_node)["public_ip"]
+    end
 
-  break if recv_host
+    break if recv_host
 
-  if i < timeout
-    sleep 1
-  else
-    raise "Failed to get IP of the node #{recv_node}"
+    if i < timeout
+      sleep 1
+    else
+      raise "Failed to get IP of the node #{recv_node}"
+    end
   end
 end
 

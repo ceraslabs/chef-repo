@@ -1,7 +1,6 @@
 #!/bin/bash
 outputfile=/tmp/virttop.csv
 while true ; do
-  virt-top -c qemu:///system -n 2 --script --csv $outputfile
-  awk -F"," 'NR==3 { for (x=20; x<=NF; x+=10) { system("gmetric -n " $x "_cpu -v " $(x+2) " -t float 1>/var/log/collect_domain_metric.log 2>&1") } }' $outputfile
-  sleep 20
+  virt-top -c qemu:///system -n 7 --script --csv $outputfile
+  tail -n+3 $outputfile | awk -F"," '{ for (x=20; x<=NF; x+=10) { sum[$x]+=$(x+2) } } END { for (x in sum) { system("gmetric -n domain_" x " -v " sum[x]/NR " -t float 1>/var/log/collect_domain_metric.log 2>&1") } }'
 done
