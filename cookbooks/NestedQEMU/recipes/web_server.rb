@@ -16,6 +16,9 @@
 #
 include_recipe "NestedQEMU::common"
 
+class Chef::Recipe
+  include Graph
+end
 
 tomcat_installed = !`dpkg --get-selections | grep tomcat6`.empty?
 unless tomcat_installed
@@ -27,42 +30,17 @@ unless tomcat_installed
   include_recipe "tomcat"
 end
 
-
 my_databag = data_bag_item(node.name, node.name)
-
 app_name = my_databag["war_file"]["name"].sub(/\.war/, "")
-if my_databag["database_node"] && my_databag["database_node"].first
+
+db_node = get_database_node.first if get_database_node
+if db_node
   # Setup database connection
-  database_node = my_databag["database_node"].first
-
-  if my_databag["vpn_connected_nodes"] && my_databag["vpn_connected_nodes"].include?(database_node)
-    timeout = my_databag["timeout_waiting_vpnip"]
-    ip_type = "vpnip"
-  else
-    timeout = my_databag["timeout_waiting_ip"]
-    ip_type = "public_ip"
+  ip_type = db_node.private_network? ? "private_ip" : "public_ip"
+  unless db_node.wait_for_attr(ip_type)
+    raise "Failed to get #{ip_type} of database node #{db_node.name}"
   end
 
-  # pick up the IP address of database
-  database_host = nil
-  for i in 1 .. timeout
-    if database_node == node.name
-      database_host = "localhost"
-    else
-      database_host = my_databag[database_node][ip_type]
-    end
-
-    if database_host
-      break
-    elsif i != timeout
-      sleep 1
-      my_databag = data_bag_item(node.name, node.name)
-    else
-      raise "Failed to get ip of database node #{database_node}"
-    end
-  end
-
-  db_databag = data_bag_item(database_node, database_node)
   application app_name do
     path "/usr/local/#{app_name}"
     owner "tomcat6"
@@ -70,22 +48,22 @@ if my_databag["database_node"] && my_databag["database_node"].first
 
     java_webapp do
       database do
-        database db_databag["database"]["name"]
+        database   db_node["database"]["name"]
         datasource my_databag["war_file"]["datasource"]
-        host database_host
-        adapter db_databag["database"]["system"]
-        username db_databag["database"]["user"]
-        password db_databag["database"]["password"]
-        port db_databag["database"]["port"]
+        host       db_node[ip_type]
+        adapter    db_node["database"]["system"]
+        username   db_node["database"]["user"]
+        password   db_node["database"]["password"]
+        port       db_node["database"]["port"]
         max_active 200
-        max_idle 30
-        max_wait 10000
-        if db_databag["database"]["system"] == "mysql"
+        max_idle   30
+        max_wait   10000
+        if db_node["database"]["system"] == "mysql"
           driver "com.mysql.jdbc.Driver"
-        elsif db_databag["database"]["system"] == "postgresql"
-          driver "org.postgresql.Driver" if db_databag["database"]["system"] == "postgresql"
+        elsif db_node["database"]["system"] == "postgresql"
+          driver "org.postgresql.Driver" if db_node["database"]["system"] == "postgresql"
         else
-          raise "Unexpected dbms #{db_databag["database"]["system"]}"
+          raise "Unexpected dbms #{db_node["database"]["system"]}"
         end
       end
     end

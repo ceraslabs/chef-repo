@@ -16,34 +16,28 @@
 #
 include_recipe "NestedQEMU::common"
 
+class Chef::Recipe
+  include Graph
+end
+
 my_databag = data_bag_item(node.name, node.name)
 
 timeout = my_databag["timeout_waiting_ip"]
 topology_id = my_databag["topology_id"]
 
 clusters = Hash.new
-my_databag["monitor_clients"].each do |client_node_name|
-  # wait for ip address of client
-  for i in 1 .. timeout
-    if client_node_name == node.name
-      client_ip = "localhost"
-    else
-      my_databag = data_bag_item(node.name, node.name)
-      client_ip = my_databag[client_node_name]["public_ip"]
+get_monitor_clients.each do |client_node|
+  if client_node.name == node.name
+    client_ip = "localhost"
+  else
+    ip_type = client_node.private_network? ? "private_ip" : "public_ip"
+    unless client_node.wait_for_attr(ip_type)
+      raise "Failed to get #{ip_type} of monitor client node #{client_node.name}"
     end
-
-    break if client_ip
-
-    if i < timeout
-      sleep 1
-    else
-      raise "Failed to get ip of node #{client_node_name}"
-    end
+    client_ip = client_node[ip_type]
   end
 
-  client_node_short_name = client_node_name.split("#{topology_id}_node_").last
-  cluster_name = client_node_short_name.sub(/_\d+$/, "")
-  clusters[cluster_name] = client_ip if client_node_short_name.end_with?("_1")
+  clusters[client_node.cluster_name] = client_ip if client_node.first_node_of_cluster?
 end
 
 node.set[:ganglia][:unicast] = true

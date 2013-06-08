@@ -16,6 +16,9 @@
 #
 include_recipe "NestedQEMU::common"
 
+class Chef::Recipe
+  include Graph
+end
 
 # install apache2
 list = `dpkg --get-selections | grep apache2`
@@ -35,34 +38,12 @@ else
   end
 end
 
-my_databag = data_bag_item(node.name, node.name)
-member_ips = Array.new
-my_databag["balancer_members"].each do |member_node|
-  if my_databag["vpn_connected_nodes"] && my_databag["vpn_connected_nodes"].include?(member_node)
-    timeout = my_databag["timeout_waiting_vpnip"]
-    ip_type = "vpnip"
-  else
-    timeout = my_databag["timeout_waiting_ip"]
-    ip_type = "public_ip"
+member_ips = get_balancer_members.map do |member_node|
+  ip_type = member_node.private_network? ? "private_ip" : "public_ip"
+  unless member_node.wait_for_attr(ip_type)
+    raise "Failed to get #{ip_type} of member node #{member_node.name}"
   end
-
-  for i in 1 .. timeout
-    if member_node == node.name
-      member_ip = "127.0.0.1"
-    else
-      member_ip = my_databag[member_node][ip_type]
-    end
-
-    if member_ip
-      member_ips << member_ip
-      break
-    elsif i != timeout
-      sleep 1
-      my_databag = data_bag_item(node.name, node.name)
-    else
-      raise "Failed to get ip of node #{member_node}"
-    end
-  end
+  member_node[ip_type]
 end
 
 template "/etc/apache2/conf.d/proxy-balancer.conf" do
