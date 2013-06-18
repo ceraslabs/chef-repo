@@ -3,12 +3,12 @@
 globals {                    
   daemonize = yes              
   setuid = yes             
-  user = ganglia              
+  user = nobody
   debug_level = 0               
   max_udp_msg_len = 1472        
   mute = <%= @mute %>
   deaf = <%= @deaf %>
-  host_dmax = 0 /*secs */ 
+  host_dmax = 120 /*secs */
   cleanup_threshold = 300 /*secs */ 
   gexec = no             
   send_metadata_interval = 30     
@@ -18,8 +18,8 @@ globals {
  * of a <CLUSTER> tag.  If you do not specify a cluster tag, then all <HOSTS> will 
  * NOT be wrapped inside of a <CLUSTER> tag. */ 
 cluster { 
-  name = "<%= @cluster_name %>"
-  owner = "unspecified" 
+  name = "misure"
+  owner = "ceras"
   latlong = "unspecified" 
   url = "unspecified" 
 } 

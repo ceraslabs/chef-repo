@@ -40,6 +40,8 @@ get_monitor_clients.each do |client_node|
   clusters[client_node.cluster_name] = client_ip if client_node.first_node_of_cluster?
 end
 
+clusters["unspecified"] = "localhost" if clusters.empty?
+
 node.set[:ganglia][:unicast] = true
 node.set[:ganglia][:clusters] = clusters
 node.set[:ganglia][:mute] = "yes"

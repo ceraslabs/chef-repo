@@ -16,25 +16,25 @@
 #
 include_recipe "NestedQEMU::common"
 
+class Chef::Recipe
+  include Graph
+end
+
 my_databag = data_bag_item(node.name, node.name)
 
-# wait for ip address of the first node of cluster
-recv_node = node.name.sub(/_\d+$/, "_1")
-timeout = my_databag["timeout_waiting_ip"]
-for i in 1 .. timeout
-  if recv_node == node.name
-    recv_host = my_databag["public_ip"]
+recv_host = "localhost"
+get_monitor_servers.each do |server_node|
+  if server_node.name == node.name
+    server_ip = "localhost"
   else
-    recv_host = data_bag_item(recv_node, recv_node)["public_ip"]
+    ip_type = server_node.private_network? ? "private_ip" : "public_ip"
+    unless server_node.wait_for_attr(ip_type)
+      raise "Failed to get #{ip_type} of monitoring server node #{server_node.name}"
+    end
+    server_ip = server_node[ip_type]
   end
 
-  break if recv_host
-
-  if i < timeout
-    sleep 1
-  else
-    raise "Failed to get IP of the node #{recv_node}"
-  end
+  recv_host = server_ip
 end
 
 topology_id = my_databag["topology_id"]
@@ -42,6 +42,7 @@ node_short_name = node.name.split("#{topology_id}_node_").last
 
 node.set[:ganglia][:cluster_name] = node_short_name.sub(/_\d+$/, "")
 node.set[:ganglia][:host] = recv_host
+node.set[:ganglia][:deaf] = "yes"
 node.set[:ganglia][:unicast] = true
 node.save
 
