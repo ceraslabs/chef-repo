@@ -1,8 +1,8 @@
 ProxyPass /balancer-manager !
-ProxyPass / balancer://Valhalla_Cluster/
+ProxyPass / balancer://Valhalla_Cluster/ stickysession=JSESSIONID
 <Proxy balancer://Valhalla_Cluster>
-<% @vpnips.each do |vpnip| -%>
-  BalancerMember http://<%= vpnip %>:80
+<% @member_ips.each do |member_ip| -%>
+  BalancerMember http://<%= member_ip %>:80
 <% end -%>
 </Proxy>
 <Location /balancer-manager>

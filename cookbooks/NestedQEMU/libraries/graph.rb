@@ -17,10 +17,13 @@ module Graph
 
     def wait_for_attr(key, options={})
       timeout = options[:timeout] || 300
+      values = options[:on_values] || Array.new
 
       for i in 1 .. timeout
         update_data
-        return true if self[key]
+        if values.include?(self[key]) || (values.empty? && self[key])
+          return true
+        end
 
         sleep 1
       end
