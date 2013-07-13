@@ -40,11 +40,11 @@ module Graph
     end
 
     def cluster_name
-      name.split("_node_").last.sub(/_\d+$/, "")
+      @context.instance_eval{ get_node_shortname }
     end
 
     def first_node_of_cluster?
-      name.end_with?("_1")
+      @context.instance_eval{ get_node_rank == 1 }
     end
 
     private

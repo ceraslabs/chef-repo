@@ -16,14 +16,9 @@
 #
 include_recipe "NestedQEMU::common"
 
-class Chef::Recipe
-  include Graph
-end
-
 my_databag = data_bag_item(node.name, node.name)
 
 timeout = my_databag["timeout_waiting_ip"]
-topology_id = my_databag["topology_id"]
 
 clusters = Hash.new
 get_monitor_clients.each do |client_node|
@@ -46,7 +41,7 @@ node.set[:ganglia][:unicast] = true
 node.set[:ganglia][:clusters] = clusters
 node.set[:ganglia][:mute] = "yes"
 node.set[:ganglia][:deaf] = "yes"
-node.set[:ganglia][:gridname] = topology_id
+node.set[:ganglia][:gridname] = get_topology_name
 node.save
 
 include_recipe "ganglia::default"

@@ -53,6 +53,7 @@ attribute :migration_command, :kind_of => [String, NilClass], :default => nil
 attribute :restart_command, :kind_of => [String, NilClass], :default => nil
 attribute :packages, :kind_of => [Array, Hash], :default => []
 attribute :application_provider
+attribute :source, :kind_of => String, :default => nil
 attr_reader :sub_resources
 
 # Callback fires before deploy is started.

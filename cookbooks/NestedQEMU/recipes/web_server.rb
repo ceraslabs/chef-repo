@@ -16,10 +16,6 @@
 #
 include_recipe "NestedQEMU::common"
 
-class Chef::Recipe
-  include Graph
-end
-
 tomcat_installed = !`dpkg --get-selections | grep tomcat6`.empty?
 unless tomcat_installed
   # install tomcat
@@ -31,7 +27,8 @@ unless tomcat_installed
 end
 
 my_databag = data_bag_item(node.name, node.name)
-app_name = my_databag["war_file"]["name"].sub(/\.war/, "")
+war_file_name = my_databag["war_file"]["name"]
+app_name = war_file_name.sub(/\.war/, "")
 
 db_node = get_database_node.first if get_database_node
 if db_node
@@ -41,10 +38,13 @@ if db_node
     raise "Failed to get #{ip_type} of database node #{db_node.name}"
   end
 
+  file_source = get_file_source(war_file_name)
+
   application app_name do
     path "/usr/local/#{app_name}"
     owner "tomcat6"
     group "tomcat6"
+    source file_source
 
     java_webapp do
       database do

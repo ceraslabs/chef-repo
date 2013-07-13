@@ -16,10 +16,6 @@
 #
 include_recipe "NestedQEMU::common"
 
-class Chef::Recipe
-  include Graph
-end
-
 my_databag = data_bag_item(node.name, node.name)
 
 recv_host = "localhost"
@@ -37,10 +33,7 @@ get_monitor_servers.each do |server_node|
   recv_host = server_ip
 end
 
-topology_id = my_databag["topology_id"]
-node_short_name = node.name.split("#{topology_id}_node_").last
-
-node.set[:ganglia][:cluster_name] = node_short_name.sub(/_\d+$/, "")
+node.set[:ganglia][:cluster_name] = get_node_shortname
 node.set[:ganglia][:host] = recv_host
 node.set[:ganglia][:deaf] = "yes"
 node.set[:ganglia][:unicast] = true

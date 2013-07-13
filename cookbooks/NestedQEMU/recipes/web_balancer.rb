@@ -16,10 +16,6 @@
 #
 include_recipe "NestedQEMU::common"
 
-class Chef::Recipe
-  include Graph
-end
-
 # install apache2
 list = `dpkg --get-selections | grep apache2`
 if list.empty?

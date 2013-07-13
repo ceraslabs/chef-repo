@@ -30,6 +30,7 @@ class Chef
         @resource_name = :java_cookbook_file
         @provider = Chef::Provider::JavaCookbookFile
         @deploy_to = nil
+        @deployer_id = nil
         @action = "deploy"
         @allowed_actions.push(:deploy, :force_deploy)
       end
@@ -46,12 +47,16 @@ class Chef
         )
       end
 
-      def release_path
-        @release_path ||= @deploy_to + "/releases/app.war"
+      def source(args=nil)
+        set_or_return(
+          :source,
+          args,
+          :kind_of => String
+        )
       end
 
-      def source
-        @source = "#{name}.war"
+      def release_path
+        @release_path ||= @deploy_to + "/releases/app.war"
       end
 
       def method_missing(name, *args, &block)

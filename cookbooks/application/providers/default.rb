@@ -128,6 +128,7 @@ def run_deploy(force = false)
     user new_resource.owner
     group new_resource.group
     deploy_to new_resource.path
+    source new_resource.source
     ssh_wrapper "#{new_resource.path}/deploy-ssh-wrapper" if new_resource.deploy_key
     shallow_clone true
     rollback_on_error new_resource.rollback_on_error
