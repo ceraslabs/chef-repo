@@ -6,5 +6,5 @@ default[:ganglia][:unicast] = false
 default[:ganglia][:server_role] = "ganglia"
 default[:ganglia][:mute] = "no"
 default[:ganglia][:deaf] = "no"
-default[:ganglia][:host] = "localhost"
+default[:ganglia][:hosts] = Array.new
 default[:ganglia][:gridname] = "unspecified"

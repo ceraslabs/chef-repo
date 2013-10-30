@@ -16,31 +16,7 @@
 #
 include_recipe "NestedQEMU::common"
 
-my_databag = data_bag_item(node.name, node.name)
-
-timeout = my_databag["timeout_waiting_ip"]
-
-clusters = Hash.new
-get_monitor_clients.each do |client_node|
-  if client_node.name == node.name
-    client_ip = "localhost"
-  else
-    ip_type = client_node.private_network? ? "private_ip" : "public_ip"
-    unless client_node.wait_for_attr(ip_type)
-      raise "Failed to get #{ip_type} of monitor client node #{client_node.name}"
-    end
-    client_ip = client_node[ip_type]
-  end
-
-  clusters[client_node.cluster_name] = client_ip if client_node.first_node_of_cluster?
-end
-
-clusters["unspecified"] = "localhost" if clusters.empty?
-
 node.set[:ganglia][:unicast] = true
-node.set[:ganglia][:clusters] = clusters
-node.set[:ganglia][:mute] = "yes"
-node.set[:ganglia][:deaf] = "yes"
 node.set[:ganglia][:gridname] = get_topology_name
 node.save
 

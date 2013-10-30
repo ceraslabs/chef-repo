@@ -16,9 +16,7 @@
 #
 include_recipe "NestedQEMU::common"
 
-my_databag = data_bag_item(node.name, node.name)
-
-recv_host = "localhost"
+mon_servers = Array.new
 get_monitor_servers.each do |server_node|
   if server_node.name == node.name
     server_ip = "localhost"
@@ -30,12 +28,10 @@ get_monitor_servers.each do |server_node|
     server_ip = server_node[ip_type]
   end
 
-  recv_host = server_ip
+  mon_servers << server_ip
 end
 
-node.set[:ganglia][:cluster_name] = get_node_shortname
-node.set[:ganglia][:host] = recv_host
-node.set[:ganglia][:deaf] = "yes"
+node.set[:ganglia][:hosts] = mon_servers
 node.set[:ganglia][:unicast] = true
 node.save
 

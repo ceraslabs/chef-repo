@@ -66,8 +66,7 @@ case node[:ganglia][:unicast]
 when true
   template "/etc/ganglia/gmond.conf" do
     source "gmond_unicast.conf.erb"
-    variables( :cluster_name => node[:ganglia][:cluster_name],
-               :host => node[:ganglia][:host],
+    variables( :hosts => node[:ganglia][:hosts],
                :mute => node[:ganglia][:mute],
                :deaf => node[:ganglia][:deaf] )
     notifies :restart, "service[ganglia-monitor]"
