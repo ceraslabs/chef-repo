@@ -37,7 +37,8 @@ when true
   template "/etc/ganglia/gmetad.conf" do
     source "gmetad.conf.erb"
     variables( :clusters => node[:ganglia][:clusters],
-               :gridname => node[:ganglia][:gridname] )
+               :gridname => node[:ganglia][:gridname],
+               :clients => node[:ganglia][:clients] )
     notifies :restart, "service[gmetad]"
   end
   if node[:recipes].include? "iptables"

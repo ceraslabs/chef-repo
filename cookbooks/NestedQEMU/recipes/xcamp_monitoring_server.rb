@@ -16,8 +16,25 @@
 #
 include_recipe "NestedQEMU::common"
 
+clients = Hash.new
+get_monitor_clients.each do |client_node|
+  if client_node.name == node.name
+    client_ip = "127.0.0.1"
+  else
+    ip_type = client_node.private_network? ? "private_ip" : "public_ip"
+    unless client_node.wait_for_attr(ip_type)
+      raise "Failed to get #{ip_type} of monitoring server node #{client_node.name}"
+    end
+    client_ip = client_node[ip_type]
+  end
+
+  client_name = get_node_shortname(client_node.name)
+  clients[client_name] = client_ip
+end
+
 node.set[:ganglia][:unicast] = true
 node.set[:ganglia][:gridname] = get_topology_name
+node.set[:ganglia][:clients] = clients
 node.save
 
 include_recipe "ganglia::default"

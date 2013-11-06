@@ -16,23 +16,9 @@
 #
 include_recipe "NestedQEMU::common"
 
-mon_servers = Array.new
-get_monitor_servers.each do |server_node|
-  if server_node.name == node.name
-    server_ip = "localhost"
-  else
-    ip_type = server_node.private_network? ? "private_ip" : "public_ip"
-    unless server_node.wait_for_attr(ip_type)
-      raise "Failed to get #{ip_type} of monitoring server node #{server_node.name}"
-    end
-    server_ip = server_node[ip_type]
-  end
-
-  mon_servers << server_ip
-end
-
-node.set[:ganglia][:hosts] = mon_servers
+node.set[:ganglia][:monitor_localhost] = true
 node.set[:ganglia][:unicast] = true
+node.set[:ganglia][:cluster_name] = get_node_shortname
 node.save
 
 include_recipe "ganglia::default"

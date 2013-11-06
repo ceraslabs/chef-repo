@@ -36,7 +36,9 @@
 # data_source "my grid" 50 1.3.4.7:8655 grid.org:8651 grid-backup.org:8651
 # data_source "another source" 1.3.4.7:8655  1.3.4.8
 
-data_source "misure" localhost
+<% @clients.each do |name, ip| -%>
+  data_source "<%= name %>" <%= ip %>
+<% end -%>
 
 #
 # Round-Robin Archives
@@ -82,7 +84,7 @@ gridname "<%= @gridname %>"
 # If you want any host which connects to the gmetad XML to receive
 # data, then set this value to "on"
 # default: off
-# all_trusted on
+all_trusted on
 #
 #-------------------------------------------------------------------------------
 # If you don't want gmetad to setuid then set this to off
