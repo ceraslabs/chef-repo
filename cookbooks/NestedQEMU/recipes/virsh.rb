@@ -127,4 +127,9 @@ nested_nodes_infos.each do |nested_node_info|
       active_domains.include?(domain)
     end
   end.run_action(:run)
+
+  execute "sleep #{domain}" do
+    command "sleep 150"
+    action :nothing
+  end.run_action(:run)
 end
