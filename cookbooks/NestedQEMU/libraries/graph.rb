@@ -55,7 +55,7 @@ module Graph
         begin
           data_bag_item(node_name, node_name)
         rescue Net::HTTPServerException => e
-          Chef::Log.warn("Cannot load databag for node " + node_name + ": " + e)
+          Chef::Log.warn("Cannot load databag for node " + node_name + ": " + e.message)
         end
       end
     end
