@@ -51,7 +51,13 @@ module Graph
 
     def update_data
       node_name = name
-      @data = @context.instance_eval{ data_bag_item(node_name, node_name) }
+      @data = @context.instance_eval do
+        begin
+          data_bag_item(node_name, node_name)
+        rescue Net::HTTPServerException => e
+          Chef::Log.warn("Cannot load databag for node " + node_name + ": " + e)
+        end
+      end
     end
   end
 
