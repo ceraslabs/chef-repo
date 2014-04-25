@@ -78,7 +78,8 @@ def create_context_file
     variables(
       :host => new_resource.database["host"],
       :database => new_resource.database,
-      :war => "#{new_resource.path}/releases/app.war"
+      :war => "#{new_resource.path}/releases/app.war",
+      :context_params => new_resource.context_params
     )
   end
 

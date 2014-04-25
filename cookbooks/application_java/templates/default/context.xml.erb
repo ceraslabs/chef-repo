@@ -3,9 +3,15 @@
   <Environment name="appEnvironment" value="<%= node.chef_environment %>"
           type="java.lang.String" override="false"/>
 
+<% if @database -%>
   <Resource name="<%= @database['datasource'] %>" auth="Container" type="javax.sql.DataSource"
             maxActive="<%= @database['max_active'] %>" maxIdle="<%= @database['max_idle'] %>" maxWait="<%= @database['max_wait'] %>" validationQuery="select 1"
             username="<%= @database['username'] %>" password="<%= @database['password'] %>" driverClassName="<%= @database['driver'] %>"
             url="jdbc:<%= @database['adapter'] %>://<%= @host %>:<%= @database['port'] %>/<%= @database['database'] %>"/>
+<% end -%>
+
+<% @context_params.each do |name, value| -%>
+  <Parameter name="<%= name %>" value="<%= value %>" override="false"/>
+<% end -%>
 
 </Context>

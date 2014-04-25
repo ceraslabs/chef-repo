@@ -29,24 +29,29 @@ end
 my_databag = data_bag_item(node.name, node.name)
 war_file_name = my_databag["war_file"]["name"]
 app_name = war_file_name.sub(/\.war/, "")
+file_source = get_file_source(war_file_name)
 
-db_node = get_database_node.first if get_database_node
+db_node = get_database_node && get_database_node.first
 if db_node
-  # Setup database connection
+  # Setup database connection.
   ip_type = db_node.private_network? ? "private_ip" : "public_ip"
   unless db_node.wait_for_attr(ip_type)
-    raise "Failed to get #{ip_type} of database node #{db_node.name}"
+    msg = "Failed to get #{ip_type} of database node #{db_node.name}"
+    raise msg
   end
+end
 
-  file_source = get_file_source(war_file_name)
 
-  application app_name do
-    path "/usr/local/#{app_name}"
-    owner "tomcat6"
-    group "tomcat6"
-    source file_source
+application app_name do
+  path "/usr/local/#{app_name}"
+  owner "tomcat6"
+  group "tomcat6"
+  source file_source
 
-    java_webapp do
+  java_webapp do
+    context_params my_databag["war_file"]["context_params"]
+
+    if db_node
       database do
         database   db_node["database"]["name"]
         datasource my_databag["war_file"]["datasource"]
@@ -67,18 +72,9 @@ if db_node
         end
       end
     end
+  end
 
-    tomcat
-  end
-else
-  # No need to setup database connection
-  application app_name do
-    path "/usr/local/#{app_name}"
-    owner "tomcat6"
-    group "tomcat6"
-    java_webapp
-    tomcat
-  end
+  tomcat
 end
 
 
